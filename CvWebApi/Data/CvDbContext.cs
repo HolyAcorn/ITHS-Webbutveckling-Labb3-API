@@ -11,4 +11,5 @@ public class CvDbContext : DbContext
     }
     
     public DbSet<Competency> Competencies { get; set; }
+    public DbSet<Project> Projects { get; set; }
 }

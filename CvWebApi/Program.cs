@@ -63,7 +63,7 @@ namespace CvWebApi
 				return Results.Ok($"{competency.Name} removed");
 			});
 
-			app.MapPost("/api/competency/{id}", async (int id, Competency newCompetency, CvDbContext db) =>
+			app.MapPut("/api/competency/{id}", async (int id, Competency newCompetency, CvDbContext db) =>
 			{
 				Competency competency = await db.Competencies.FirstOrDefaultAsync(d => d.Id == id);
 				if(competency == null) return Results.NotFound();
@@ -71,7 +71,49 @@ namespace CvWebApi
 				competency.Name = newCompetency.Name;
 				competency.CompetencyLevel = newCompetency.CompetencyLevel;
 				competency.YearsOfExperience = newCompetency.YearsOfExperience;
+				await db.SaveChangesAsync();
 				return Results.Ok($"{competency.Name} altered");
+			});
+			
+			
+			
+			app.MapPost("/api/project", async (Project project, CvDbContext db) =>
+			{
+				await db.Projects.AddAsync(project);
+				await db.SaveChangesAsync();
+				return Results.Ok($"{project.Name} added");
+			});
+
+			app.MapGet("/api/projects", async (CvDbContext db) =>
+			{
+				return Results.Ok(await db.Projects.ToListAsync());
+			});
+			
+			app.MapGet("/api/project/{id}", async (int id, CvDbContext db) =>
+			{
+				return Results.Ok(await db.Projects.FirstOrDefaultAsync(d => d.Id == id));
+			});
+			
+			app.MapDelete("/api/project/{id}", async (int id, CvDbContext db) =>
+			{
+				Project project = await db.Projects.FirstOrDefaultAsync(d => d.Id == id);
+				if(project == null) return Results.NotFound();
+				db.Projects.Remove(project);
+				await db.SaveChangesAsync();
+				return Results.Ok($"{project.Name} removed");
+			});
+			
+			app.MapPut("/api/project/{id}", async (int id, Project newProject, CvDbContext db) =>
+			{
+				Project project = await db.Projects.FirstOrDefaultAsync(d => d.Id == id);
+				if(project == null) return Results.NotFound();
+				
+				project.Name = newProject.Name;
+				project.Type = newProject.Type;
+				project.Description = newProject.Description;
+				project.Url = newProject.Url;
+				await db.SaveChangesAsync();
+				return Results.Ok($"{project.Name} altered");
 			});
 
 			app.Run();
