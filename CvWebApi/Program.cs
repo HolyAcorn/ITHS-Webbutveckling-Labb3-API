@@ -1,32 +1,80 @@
-namespace CvWebApi;
 
-public class Program
+using CvWebApi.Data;
+using CvWebApi.Models;
+using Microsoft.EntityFrameworkCore;
+
+namespace CvWebApi
 {
-    public static void Main(string[] args)
-    {
-        var builder = WebApplication.CreateBuilder(args);
+	public class Program
+	{
+		public static void Main(string[] args)
+		{
+			var builder = WebApplication.CreateBuilder(args);
 
-        // Add services to the container.
+			// Add services to the container.
+			builder.Services.AddAuthorization();
 
-        builder.Services.AddControllers();
-        // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-        builder.Services.AddOpenApi();
+			// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+			builder.Services.AddEndpointsApiExplorer();
+			builder.Services.AddSwaggerGen();
 
-        var app = builder.Build();
+			builder.Services.AddDbContext<CvDbContext>(option =>
+			{
+				option.UseSqlServer(Environment.GetEnvironmentVariable("CvDbConnection"));
+			});
+			
 
-        // Configure the HTTP request pipeline.
-        if (app.Environment.IsDevelopment())
-        {
-            app.MapOpenApi();
-        }
+			var app = builder.Build();
 
-        app.UseHttpsRedirection();
+			// Configure the HTTP request pipeline.
+			if (app.Environment.IsDevelopment())
+			{
+				app.UseSwagger();
+				app.UseSwaggerUI();
+			}
 
-        app.UseAuthorization();
+			app.UseHttpsRedirection();
 
+			app.UseAuthorization();
 
-        app.MapControllers();
+			app.MapPost("/api/competency", async (Competency competency, CvDbContext db) =>
+			{
+				await db.Competencies.AddAsync(competency);
+				await db.SaveChangesAsync();
+				return Results.Ok($"{competency.Name} added");
+			});
 
-        app.Run();
-    }
+			app.MapGet("/api/competencies", async (CvDbContext db) =>
+			{
+				return Results.Ok(await db.Competencies.ToListAsync());
+			});
+
+			app.MapGet("/api/competency/{id}", async (int id, CvDbContext db) =>
+			{
+				return Results.Ok(await db.Competencies.FirstOrDefaultAsync(d => d.Id == id));
+			});
+
+			app.MapDelete("/api/competency/{id}", async (int id, CvDbContext db) =>
+			{
+				Competency competency = await db.Competencies.FirstOrDefaultAsync(d => d.Id == id);
+				if(competency == null) return Results.NotFound();
+				db.Competencies.Remove(competency);
+				await db.SaveChangesAsync();
+				return Results.Ok($"{competency.Name} removed");
+			});
+
+			app.MapPost("/api/competency/{id}", async (int id, Competency newCompetency, CvDbContext db) =>
+			{
+				Competency competency = await db.Competencies.FirstOrDefaultAsync(d => d.Id == id);
+				if(competency == null) return Results.NotFound();
+				
+				competency.Name = newCompetency.Name;
+				competency.CompetencyLevel = newCompetency.CompetencyLevel;
+				competency.YearsOfExperience = newCompetency.YearsOfExperience;
+				return Results.Ok($"{competency.Name} altered");
+			});
+
+			app.Run();
+		}
+	}
 }
